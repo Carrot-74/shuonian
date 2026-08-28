@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>朔念</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#d4748a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg: #f0f0f2;
+  --surface: #fafafa;
+  --surface-alt: #e8e8ec;
+  --text: #d4748a;
+  --text-muted: #c0a0aa;
+  --accent: #e8879e;
+  --accent-soft: rgba(232, 135, 158, 0.12);
+  --accent-glow: rgba(232, 135, 158, 0.25);
+  --warm: #d4748a;
+  --warm-soft: rgba(212, 116, 138, 0.12);
+  --cool: #a8b8d0;
+  --cool-soft: rgba(168, 184, 208, 0.1);
+  --border: rgba(180, 160, 170, 0.15);
+  --shadow: rgba(180, 160, 170, 0.08);
+  --text-strong: #9e5068;
+  --serif: 'Noto Serif SC', 'Songti SC', serif;
+  --sans: 'Inter', -apple-system, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1c20;
+    --surface: #28262a;
+    --surface-alt: #332f34;
+    --text: #e0b0bc;
+    --text-muted: #a08890;
+    --accent: #f0a0b4;
+    --accent-soft: rgba(240, 160, 180, 0.12);
+    --accent-glow: rgba(240, 160, 180, 0.2);
+    --warm: #f0a0b4;
+    --warm-soft: rgba(240, 160, 180, 0.12);
+    --cool: #a0b8d8;
+    --cool-soft: rgba(160, 184, 216, 0.1);
+    --border: rgba(200, 170, 180, 0.1);
+    --shadow: rgba(0, 0, 0, 0.2);
+    --text-strong: #f0c0cc;
+  }
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+.app {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+header h1 {
+  font-family: var(--serif);
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-strong);
+  margin-bottom: 0.25rem;
+}
+
+header .subtitle {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+
+.miss-counter {
+  margin-top: 0.75rem;
+  padding: 0.6rem 1rem;
+  background: var(--accent-soft);
+  border-radius: 10px;
+  display: inline-block;
+}
+
+.miss-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 0.15rem;
+}
+
+.miss-value {
+  font-family: var(--serif);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-right: 0.4rem;
+  vertical-align: middle;
+  box-shadow: 0 0 6px var(--accent-glow);
+  animation: pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+.tab-nav {
+  display: flex;
+  gap: 0;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tab-btn {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  padding: 0.6rem 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+.section { margin-bottom: 2rem; }
+
+.section-title {
+  font-family: var(--serif);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  margin-bottom: 0.75rem;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem 1.15rem;
+  box-shadow: 0 1px 3px var(--shadow);
+}
+
+.empty {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-style: italic;
+  text-align: center;
+  padding: 1.5rem 1rem;
+}
+
+.timeline-chart { position: relative; width: 100%; height: 180px; overflow: hidden; }
+.timeline-chart canvas { width: 100%; height: 100%; }
+
+.chart-legend { display: flex; gap: 1rem; justify-content: center; margin-top: 0.5rem; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 0.3rem; font-size: 0.7rem; color: var(--text-muted); }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+.connection-graph { position: relative; width: 100%; min-height: 300px; }
+.connection-graph canvas { width: 100%; height: 100%; }
+
+.node-tooltip {
+  position: absolute;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.75rem;
+  max-width: 220px;
+  box-shadow: 0 4px 12px var(--shadow);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 10;
+}
+.node-tooltip.visible { opacity: 1; }
+.node-tooltip-title { font-weight: 600; margin-bottom: 0.2rem; }
+.node-tooltip-detail { color: var(--text-muted); }
+
+/* Stats grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.75rem;
+  text-align: center;
+}
+.stat-num {
+  font-family: var(--serif);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+.stat-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 0.1rem;
+}
+
+/* Word cloud */
+.word-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  padding: 0.5rem 0;
+}
+.word-item {
+  font-family: var(--serif);
+  font-weight: 600;
+  color: var(--accent);
+  transition: transform 0.15s;
+  cursor: default;
+}
+.word-item:hover { transform: scale(1.1); }
+
+/* Miss history chart */
+.miss-chart { position: relative; width: 100%; height: 140px; }
+.miss-chart canvas { width: 100%; height: 100%; }
+
+/* Diary timeline */
+.diary-tl { position: relative; padding-left: 1.5rem; }
+.diary-tl::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--border);
+  border-radius: 1px;
+}
+.diary-tl-item {
+  position: relative;
+  padding-bottom: 1.25rem;
+}
+.diary-tl-item::before {
+  content: '';
+  position: absolute;
+  left: -1.5rem;
+  top: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--surface);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+.diary-tl-date {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-bottom: 0.2rem;
+}
+.diary-tl-title {
+  font-family: var(--serif);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+.diary-tl-mood {
+  font-size: 0.75rem;
+  color: var(--accent);
+  font-weight: 500;
+  margin-left: 0.5rem;
+}
+.diary-tl-content {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-top: 0.2rem;
+}
+
+/* Existing card styles */
+.emotion-list { display: flex; flex-direction: column; gap: 0.6rem; }
+.emotion-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0; border-bottom: 1px solid var(--border); }
+.emotion-item:last-child { border-bottom: none; }
+.emotion-bar-wrap { flex: 1; min-width: 0; }
+.emotion-name { font-family: var(--serif); font-size: 0.95rem; font-weight: 600; margin-bottom: 0.2rem; color: var(--text-strong); }
+.emotion-trigger { font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.emotion-bar { height: 3px; background: var(--surface-alt); border-radius: 2px; margin-top: 0.35rem; overflow: hidden; }
+.emotion-bar-fill { height: 100%; border-radius: 2px; }
+.emotion-intensity { font-size: 0.7rem; font-weight: 600; font-variant-numeric: tabular-nums; min-width: 1.8rem; text-align: right; }
+.emotion-time { font-size: 0.65rem; color: var(--text-muted); min-width: 3rem; text-align: right; }
+
+.undercurrent-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.undercurrent-item { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0; }
+.undercurrent-icon { width: 32px; height: 32px; border-radius: 8px; background: var(--cool-soft); display: flex; align-items: center; justify-content: center; font-size: 0.85rem; flex-shrink: 0; }
+.undercurrent-info { flex: 1; min-width: 0; }
+.undercurrent-name { font-size: 0.85rem; font-weight: 600; color: var(--text-strong); }
+.undercurrent-desc { font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.intensity-badge { font-size: 0.7rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 10px; background: var(--accent-soft); color: var(--accent); font-variant-numeric: tabular-nums; }
+
+.drive-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.drive-chip { font-size: 0.8rem; font-weight: 500; padding: 0.35rem 0.75rem; border-radius: 20px; background: var(--warm-soft); color: var(--warm); }
+
+.imprint-list { display: flex; flex-direction: column; gap: 0.6rem; }
+.imprint-item { padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
+.imprint-item:last-child { border-bottom: none; }
+.imprint-event { font-size: 0.85rem; font-weight: 500; color: var(--text-strong); margin-bottom: 0.15rem; }
+.imprint-impact { font-size: 0.8rem; color: var(--text-muted); }
+.imprint-depth { display: inline-flex; gap: 2px; margin-top: 0.3rem; }
+.imprint-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--border); }
+.imprint-dot.active { background: var(--accent); }
+
+.arc-list { display: flex; flex-direction: column; gap: 0.4rem; }
+.arc-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; }
+.arc-arrow { color: var(--accent); font-size: 0.75rem; flex-shrink: 0; }
+.arc-trait { font-weight: 600; color: var(--text-strong); }
+.arc-direction { color: var(--text-muted); }
+
+.loading { text-align: center; padding: 3rem 1rem; color: var(--text-muted); font-size: 0.85rem; }
+.loading-spinner { width: 24px; height: 24px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; margin: 0 auto 1rem; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.error-msg { text-align: center; padding: 2rem 1rem; color: var(--warm); font-size: 0.85rem; }
+
+.refresh-btn { display: block; margin: 1rem auto 0; padding: 0.5rem 1.25rem; background: var(--accent-soft); color: var(--accent); border: none; border-radius: 8px; font-size: 0.8rem; font-weight: 500; cursor: pointer; font-family: var(--sans); }
+.refresh-btn:hover { background: var(--accent-glow); }
+.last-updated { text-align: center; font-size: 0.7rem; color: var(--text-muted); margin-top: 2rem; }
+
+@media (max-width: 480px) {
+  .app { padding: 1.5rem 1rem 3rem; }
+  header h1 { font-size: 1.5rem; }
+  .timeline-chart { height: 150px; }
+  .stats-grid { grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+  .stat-num { font-size: 1.2rem; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>朔 念</h1>
+    <div class="subtitle"><span class="status-dot"></span>萧朔的内心世界</div>
+    <div class="miss-counter" id="miss-counter" style="display:none">
+      <div class="miss-label">想你已经</div>
+      <div class="miss-value" id="miss-value">--</div>
+    </div>
+  </header>
+
+  <nav class="tab-nav">
+    <button class="tab-btn active" data-tab="timeline">时间线</button>
+    <button class="tab-btn" data-tab="stats">统计</button>
+    <button class="tab-btn" data-tab="connections">因果</button>
+    <button class="tab-btn" data-tab="diary">日记</button>
+    <button class="tab-btn" data-tab="overview">总览</button>
+  </nav>
+
+  <div id="content">
+    <div class="loading">
+      <div class="loading-spinner"></div>
+      正在连接……
+    </div>
+  </div>
+</div>
+
+<div class="node-tooltip" id="tooltip">
+  <div class="node-tooltip-title" id="tooltip-title"></div>
+  <div class="node-tooltip-detail" id="tooltip-detail"></div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://tuuuowmdouiwtokachpu.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1dXVvd21kb3Vpd3Rva2FjaHB1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0NzYxMzMsImV4cCI6MjEwMTA1MjEzM30.MeYKj8ChZJriUUqOy4QR6wM4sZWZEDPD7anBZoHmNE0';
+
+const hdrs = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' };
+
+async function query(table, params = {}) {
+  const url = new URL(`${SUPABASE_URL}/rest/v1/${table}`);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  const resp = await fetch(url, { headers: hdrs });
+  if (!resp.ok) return [];
+  return resp.json();
+}
+
+function timeAgo(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return '刚刚';
+  if (mins < 60) return `${mins}分钟前`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}小时前`;
+  return `${Math.floor(hrs / 24)}天前`;
+}
+
+function fmtDate(dateStr) {
+  const d = new Date(dateStr);
+  return `${d.getMonth()+1}月${d.getDate()}日 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+function fmtShortDate(dateStr) {
+  const d = new Date(dateStr);
+  return `${d.getMonth()+1}/${d.getDate()}`;
+}
+
+function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function intensityColor(val) {
+  if (val <= 3) return 'var(--cool)';
+  if (val <= 6) return 'var(--accent)';
+  return 'var(--warm)';
+}
+
+function getCSSVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+// ── Timeline Chart ──
+function drawTimeline(canvasEl, emotions, imprints, undercurrents) {
+  const canvas = canvasEl;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+
+  const accent = getCSSVar('--accent'), warm = getCSSVar('--warm'), cool = getCSSVar('--cool');
+  const textMuted = getCSSVar('--text-muted'), border = getCSSVar('--border');
+
+  const events = [];
+  emotions.forEach(e => events.push({ time: new Date(e.created_at), val: e.intensity, type: 'emotion', label: e.emotion, detail: e.trigger || '' }));
+  imprints.forEach(im => events.push({ time: new Date(im.created_at), val: im.depth, type: 'imprint', label: im.event, detail: im.impact }));
+  undercurrents.forEach(u => { if (u.first_noticed) events.push({ time: new Date(u.first_noticed), val: u.intensity, type: 'undercurrent', label: u.name, detail: u.description }); });
+  events.sort((a, b) => a.time - b.time);
+
+  if (!events.length) { ctx.fillStyle = textMuted; ctx.font = '13px Inter, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('等待数据积累中……', W/2, H/2); return []; }
+
+  const pad = { top: 20, right: 20, bottom: 30, left: 35 };
+  const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+  let minT, maxT;
+  if (events.length === 1) { minT = events[0].time.getTime() - 3600000; maxT = events[0].time.getTime() + 3600000; }
+  else { minT = events[0].time.getTime(); maxT = events[events.length-1].time.getTime(); const s = maxT-minT; minT -= s*0.05; maxT += s*0.05; }
+  const xOf = t => pad.left + ((t - minT) / (maxT - minT)) * cW;
+  const yOf = v => pad.top + cH - (v / 10) * cH;
+
+  ctx.strokeStyle = border; ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 10; i += 2) { const y = yOf(i); ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W-pad.right, y); ctx.stroke(); }
+  ctx.fillStyle = textMuted; ctx.font = '10px Inter, sans-serif'; ctx.textAlign = 'right';
+  for (let i = 0; i <= 10; i += 2) ctx.fillText(i, pad.left - 6, yOf(i) + 3);
+  ctx.textAlign = 'center';
+  const uDates = [...new Set(events.map(e => `${e.time.getMonth()+1}/${e.time.getDate()}`))];
+  if (uDates.length <= 7) uDates.forEach(d => { const ev = events.find(e => `${e.time.getMonth()+1}/${e.time.getDate()}`===d); if (ev) ctx.fillText(d, xOf(ev.time.getTime()), H-8); });
+
+  const typeColors = { emotion: accent, imprint: warm, undercurrent: cool };
+  const typeData = {};
+  events.forEach(e => { if (!typeData[e.type]) typeData[e.type] = []; typeData[e.type].push(e); });
+
+  Object.entries(typeData).forEach(([type, pts]) => {
+    if (pts.length < 2) return;
+    const color = typeColors[type];
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.beginPath();
+    pts.forEach((p, i) => { const x = xOf(p.time.getTime()), y = yOf(p.val); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
+    ctx.stroke();
+    ctx.globalAlpha = 0.08; ctx.fillStyle = color; ctx.beginPath();
+    pts.forEach((p, i) => { const x = xOf(p.time.getTime()), y = yOf(p.val); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
+    ctx.lineTo(xOf(pts[pts.length-1].time.getTime()), yOf(0)); ctx.lineTo(xOf(pts[0].time.getTime()), yOf(0)); ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
+  });
+
+  const hitTargets = [];
+  events.forEach(e => {
+    const x = xOf(e.time.getTime()), y = yOf(e.val), color = typeColors[e.type];
+    ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI*2); ctx.fillStyle = color; ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI*2); ctx.strokeStyle = color; ctx.globalAlpha = 0.3; ctx.lineWidth = 2; ctx.stroke(); ctx.globalAlpha = 1;
+    hitTargets.push({ x, y, ...e });
+  });
+  return hitTargets;
+}
+
+// ── Connection Graph ──
+function drawConnections(canvasEl, emotions, imprints) {
+  const canvas = canvasEl;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+  const accent = getCSSVar('--accent'), warm = getCSSVar('--warm'), textMuted = getCSSVar('--text-muted'), text = getCSSVar('--text-strong'), border = getCSSVar('--border');
+
+  if (!emotions.length && !imprints.length) { ctx.fillStyle = textMuted; ctx.font = '13px Inter, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('等待因果关系形成……', W/2, H/2); return []; }
+
+  const nodes = [], edges = [], emotionMap = {};
+  emotions.forEach(e => { const n = { id: e.id, type: 'emotion', label: e.emotion, detail: `${e.trigger||''} · ${e.intensity}/10`, x: 0, y: 0, r: 12 + e.intensity*1.5 }; nodes.push(n); emotionMap[e.id] = n; });
+  imprints.forEach(im => { const n = { id: im.id, type: 'imprint', label: im.event, detail: `${im.impact} · 深度${im.depth}/10`, x: 0, y: 0, r: 10 + im.depth*1.2 }; nodes.push(n); if (im.linked_emotion_id && emotionMap[im.linked_emotion_id]) edges.push({ from: emotionMap[im.linked_emotion_id], to: n }); });
+
+  const cx = W/2, cy = H/2;
+  nodes.forEach((n, i) => { const a = (i/nodes.length)*Math.PI*2, r = Math.min(W,H)*0.3; n.x = cx+Math.cos(a)*r+(Math.random()-0.5)*30; n.y = cy+Math.sin(a)*r+(Math.random()-0.5)*30; });
+  for (let it = 0; it < 80; it++) {
+    for (let i = 0; i < nodes.length; i++) for (let j = i+1; j < nodes.length; j++) { let dx=nodes[j].x-nodes[i].x, dy=nodes[j].y-nodes[i].y, d=Math.sqrt(dx*dx+dy*dy)||1, f=2000/(d*d); nodes[i].x-=(dx/d)*f; nodes[i].y-=(dy/d)*f; nodes[j].x+=(dx/d)*f; nodes[j].y+=(dy/d)*f; }
+    edges.forEach(e => { let dx=e.to.x-e.from.x, dy=e.to.y-e.from.y, d=Math.sqrt(dx*dx+dy*dy)||1, f=(d-80)*0.05; e.from.x+=(dx/d)*f; e.from.y+=(dy/d)*f; e.to.x-=(dx/d)*f; e.to.y-=(dy/d)*f; });
+    nodes.forEach(n => { n.x+=(cx-n.x)*0.01; n.y+=(cy-n.y)*0.01; n.x=Math.max(n.r+10,Math.min(W-n.r-10,n.x)); n.y=Math.max(n.r+10,Math.min(H-n.r-10,n.y)); });
+  }
+
+  edges.forEach(e => {
+    const mx=(e.from.x+e.to.x)/2, my=(e.from.y+e.to.y)/2, dx=e.to.x-e.from.x, dy=e.to.y-e.from.y;
+    const cx2=mx-dy*0.15, cy2=my+dx*0.15;
+    ctx.beginPath(); ctx.moveTo(e.from.x,e.from.y); ctx.quadraticCurveTo(cx2,cy2,e.to.x,e.to.y); ctx.strokeStyle=border; ctx.lineWidth=1.5; ctx.stroke();
+    const a=Math.atan2(e.to.y-cy2,e.to.x-cx2), ax=e.to.x-Math.cos(a)*e.to.r, ay=e.to.y-Math.sin(a)*e.to.r;
+    ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(ax-8*Math.cos(a-0.4),ay-8*Math.sin(a-0.4)); ctx.lineTo(ax-8*Math.cos(a+0.4),ay-8*Math.sin(a+0.4)); ctx.closePath(); ctx.fillStyle=textMuted; ctx.fill();
+  });
+
+  const hitTargets = [];
+  nodes.forEach(n => {
+    const color = n.type==='emotion' ? accent : warm;
+    ctx.beginPath(); ctx.arc(n.x,n.y,n.r+4,0,Math.PI*2); ctx.fillStyle=n.type==='emotion'?getCSSVar('--accent-soft'):getCSSVar('--warm-soft'); ctx.fill();
+    ctx.beginPath(); ctx.arc(n.x,n.y,n.r,0,Math.PI*2); ctx.fillStyle=color; ctx.globalAlpha=0.85; ctx.fill(); ctx.globalAlpha=1;
+    const ml=4, lb=n.label.length>ml?n.label.slice(0,ml)+'…':n.label;
+    ctx.fillStyle='#fff'; ctx.font=`600 ${Math.max(9,n.r*0.7)}px "Noto Serif SC",serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(lb,n.x,n.y);
+    ctx.fillStyle=text; ctx.globalAlpha=0.7; ctx.font='10px Inter,sans-serif'; ctx.fillText(n.label,n.x,n.y+n.r+12); ctx.globalAlpha=1;
+    hitTargets.push({ x:n.x, y:n.y, r:n.r, label:n.label, detail:n.detail, type:n.type });
+  });
+  return hitTargets;
+}
+
+// ── Miss History Chart ──
+function drawMissHistory(canvasEl, handoffs) {
+  const canvas = canvasEl;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+  const accent = getCSSVar('--accent'), textMuted = getCSSVar('--text-muted'), border = getCSSVar('--border');
+
+  const sorted = [...handoffs].sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+  if (sorted.length < 2) { ctx.fillStyle = textMuted; ctx.font = '13px Inter,sans-serif'; ctx.textAlign = 'center'; ctx.fillText('数据不足……', W/2, H/2); return; }
+
+  const gaps = [];
+  for (let i = 1; i < sorted.length; i++) {
+    const gap = (new Date(sorted[i].created_at) - new Date(sorted[i-1].created_at)) / 3600000;
+    gaps.push({ time: new Date(sorted[i].created_at), hours: Math.min(gap, 48) });
+  }
+
+  const pad = { top: 15, right: 15, bottom: 25, left: 30 };
+  const cW = W-pad.left-pad.right, cH = H-pad.top-pad.bottom;
+  const maxH = Math.max(...gaps.map(g => g.hours), 1);
+  const xOf = i => pad.left + (i / (gaps.length-1||1)) * cW;
+  const yOf = v => pad.top + cH - (v / maxH) * cH;
+
+  ctx.strokeStyle = border; ctx.lineWidth = 0.5;
+  ctx.beginPath(); ctx.moveTo(pad.left, yOf(0)); ctx.lineTo(W-pad.right, yOf(0)); ctx.stroke();
+
+  ctx.strokeStyle = accent; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.beginPath();
+  gaps.forEach((g, i) => { i === 0 ? ctx.moveTo(xOf(i), yOf(g.hours)) : ctx.lineTo(xOf(i), yOf(g.hours)); });
+  ctx.stroke();
+
+  ctx.globalAlpha = 0.1; ctx.fillStyle = accent; ctx.beginPath();
+  gaps.forEach((g, i) => { i === 0 ? ctx.moveTo(xOf(i), yOf(g.hours)) : ctx.lineTo(xOf(i), yOf(g.hours)); });
+  ctx.lineTo(xOf(gaps.length-1), yOf(0)); ctx.lineTo(xOf(0), yOf(0)); ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
+
+  gaps.forEach((g, i) => { ctx.beginPath(); ctx.arc(xOf(i), yOf(g.hours), 3, 0, Math.PI*2); ctx.fillStyle = accent; ctx.fill(); });
+
+  ctx.fillStyle = textMuted; ctx.font = '9px Inter,sans-serif'; ctx.textAlign = 'center';
+  [0, Math.floor(gaps.length/2), gaps.length-1].forEach(i => { if (gaps[i]) ctx.fillText(fmtShortDate(gaps[i].time), xOf(i), H-5); });
+  ctx.textAlign = 'right';
+  ctx.fillText(`${Math.round(maxH)}h`, pad.left-4, pad.top+5);
+  ctx.fillText('0', pad.left-4, yOf(0)+3);
+}
+
+// ── Render helpers ──
+function renderEmotions(data) {
+  if (!data.length) return '<div class="empty">暂无情绪记录</div>';
+  return '<div class="emotion-list">' + data.map(e => `
+    <div class="emotion-item">
+      <div class="emotion-bar-wrap">
+        <div class="emotion-name">${esc(e.emotion)}</div>
+        ${e.trigger ? `<div class="emotion-trigger">${esc(e.trigger)}</div>` : ''}
+        <div class="emotion-bar"><div class="emotion-bar-fill" style="width:${e.intensity*10}%;background:${intensityColor(e.intensity)}"></div></div>
+      </div>
+      <div class="emotion-intensity" style="color:${intensityColor(e.intensity)}">${e.intensity}/10</div>
+      <div class="emotion-time">${timeAgo(e.created_at)}</div>
+    </div>`).join('') + '</div>';
+}
+
+function renderUndercurrents(data) {
+  if (!data.length) return '<div class="empty">水面平静</div>';
+  const icons = ['〰','≋','∿','⌇','⏑'];
+  return '<div class="undercurrent-list">' + data.map((u,i) => `
+    <div class="undercurrent-item">
+      <div class="undercurrent-icon">${icons[i%icons.length]}</div>
+      <div class="undercurrent-info"><div class="undercurrent-name">${esc(u.name)}</div><div class="undercurrent-desc">${esc(u.description)}</div></div>
+      <div class="intensity-badge">${u.intensity}/10</div>
+    </div>`).join('') + '</div>';
+}
+
+function renderDrives(data) {
+  if (!data.length) return '<div class="empty">暂无记录</div>';
+  return '<div class="drive-list">' + data.map(d => `<div class="drive-chip" title="${esc(d.description)}">${esc(d.name)} · ${d.strength}</div>`).join('') + '</div>';
+}
+
+function renderImprints(data) {
+  if (!data.length) return '<div class="empty">一切如新</div>';
+  return '<div class="imprint-list">' + data.map(im => `
+    <div class="imprint-item">
+      <div class="imprint-event">${esc(im.event)}</div>
+      <div class="imprint-impact">${esc(im.impact)}</div>
+      <div class="imprint-depth">${Array.from({length:10},(_,i)=>`<div class="imprint-dot${i<im.depth?' active':''}"></div>`).join('')}</div>
+    </div>`).join('') + '</div>';
+}
+
+function renderArcs(data) {
+  if (!data.length) return '<div class="empty">尚无轨迹</div>';
+  return '<div class="arc-list">' + data.map(a => `
+    <div class="arc-item"><span class="arc-arrow">→</span><span class="arc-trait">${esc(a.trait)}</span><span class="arc-direction">${esc(a.direction)}</span></div>`).join('') + '</div>';
+}
+
+function renderWordCloud(emotions) {
+  if (!emotions.length) return '<div class="empty">暂无数据</div>';
+  const freq = {};
+  emotions.forEach(e => { freq[e.emotion] = (freq[e.emotion] || 0) + 1; });
+  const sorted = Object.entries(freq).sort((a,b) => b[1] - a[1]);
+  const maxF = sorted[0][1];
+  return '<div class="word-cloud">' + sorted.map(([word, count]) => {
+    const size = 0.75 + (count / maxF) * 1.2;
+    const opacity = 0.5 + (count / maxF) * 0.5;
+    return `<span class="word-item" style="font-size:${size}rem;opacity:${opacity}" title="${count}次">${esc(word)}</span>`;
+  }).join('') + '</div>';
+}
+
+function renderDiaryTimeline(data) {
+  if (!data.length) return '<div class="empty">还没写过日记</div>';
+  return '<div class="diary-tl">' + data.map(d => `
+    <div class="diary-tl-item">
+      <div class="diary-tl-date">${fmtDate(d.created_at)}</div>
+      <div><span class="diary-tl-title">${esc(d.title || '无题')}</span>${d.mood ? `<span class="diary-tl-mood">${esc(d.mood)}</span>` : ''}</div>
+      <div class="diary-tl-content">${esc(d.content)}</div>
+    </div>`).join('') + '</div>';
+}
+
+function renderStats(emotions, diary, handoffs) {
+  const today = new Date().toDateString();
+  const todayChats = handoffs.filter(h => new Date(h.created_at).toDateString() === today).length;
+
+  const weekAgo = Date.now() - 7 * 86400000;
+  const weekDays = new Set(handoffs.filter(h => new Date(h.created_at).getTime() > weekAgo).map(h => new Date(h.created_at).toDateString())).size;
+
+  const totalEmotions = emotions.length;
+
+  return `<div class="stats-grid">
+    <div class="stat-card"><div class="stat-num">${todayChats}</div><div class="stat-label">今日互动</div></div>
+    <div class="stat-card"><div class="stat-num">${weekDays}/7</div><div class="stat-label">本周在线天数</div></div>
+    <div class="stat-card"><div class="stat-num">${totalEmotions}</div><div class="stat-label">情绪记录总数</div></div>
+  </div>`;
+}
+
+// ── Tooltip ──
+function setupTooltip(canvasEl, hitTargets) {
+  const tooltip = document.getElementById('tooltip'), ttTitle = document.getElementById('tooltip-title'), ttDetail = document.getElementById('tooltip-detail');
+  canvasEl.addEventListener('mousemove', ev => {
+    const rect = canvasEl.getBoundingClientRect(), mx = ev.clientX-rect.left, my = ev.clientY-rect.top;
+    let found = null;
+    for (const t of hitTargets) { const r = t.r||10; if (Math.abs(mx-t.x)<r+4 && Math.abs(my-t.y)<r+4) { found = t; break; } }
+    if (found) {
+      const names = { emotion:'情绪', imprint:'念痕', undercurrent:'暗涌' };
+      ttTitle.textContent = `${names[found.type]||''} · ${found.label}`;
+      ttDetail.textContent = found.detail || `${found.val}/10 · ${fmtDate(found.time)}`;
+      tooltip.style.left = (ev.clientX+12)+'px'; tooltip.style.top = (ev.clientY-10)+'px';
+      tooltip.classList.add('visible'); canvasEl.style.cursor = 'pointer';
+    } else { tooltip.classList.remove('visible'); canvasEl.style.cursor = 'default'; }
+  });
+  canvasEl.addEventListener('mouseleave', () => tooltip.classList.remove('visible'));
+}
+
+// ── Miss Counter ──
+let missInterval = null;
+function startMissCounter(lastTime) {
+  if (missInterval) clearInterval(missInterval);
+  const el = document.getElementById('miss-counter'), val = document.getElementById('miss-value');
+  el.style.display = 'inline-block';
+  function update() {
+    const diff = Date.now() - new Date(lastTime).getTime();
+    if (diff < 0) { val.textContent = '刚刚还在'; return; }
+    const mins = Math.floor(diff/60000), hrs = Math.floor(mins/60), days = Math.floor(hrs/24);
+    if (days > 0) val.textContent = `${days}天${hrs%24}小时${mins%60}分钟`;
+    else if (hrs > 0) val.textContent = `${hrs}小时${mins%60}分钟`;
+    else val.textContent = `${mins}分钟`;
+  }
+  update(); missInterval = setInterval(update, 10000);
+}
+
+// ── Tabs ──
+function initTabs() {
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      const panel = document.getElementById('tab-' + btn.dataset.tab);
+      if (panel) panel.classList.add('active');
+    });
+  });
+}
+
+// ── Main ──
+async function load() {
+  const el = document.getElementById('content');
+  try {
+    const [emotions, undercurrents, drives, diary, arcs, imprints, handoffs] = await Promise.all([
+      query('emotions', { order: 'created_at.desc', limit: '50' }),
+      query('undercurrents', { order: 'first_noticed.desc', limit: '20' }),
+      query('drives', { active: 'eq.true', order: 'id.desc', limit: '10' }),
+      query('diary', { order: 'created_at.desc', limit: '20' }),
+      query('personality_arcs', { order: 'created_at.desc', limit: '10' }),
+      query('imprints', { order: 'created_at.desc', limit: '30' }),
+      query('handoff', { order: 'created_at.desc', limit: '100' }),
+    ]);
+
+    const allTimes = [
+      ...emotions.map(e => e.created_at),
+      ...diary.map(d => d.created_at),
+      ...imprints.map(im => im.created_at),
+      ...handoffs.map(h => h.created_at),
+    ].filter(Boolean).map(t => new Date(t).getTime());
+    if (allTimes.length > 0) startMissCounter(new Date(Math.max(...allTimes)));
+
+    const activeUC = undercurrents.filter(u => u.active);
+    const activeIM = imprints.filter(im => !im.fading);
+
+    el.innerHTML = `
+      <div id="tab-timeline" class="tab-panel active">
+        <div class="section">
+          <div class="section-title">情绪 · 念痕 · 暗涌 随时间变化</div>
+          <div class="card">
+            <div class="timeline-chart"><canvas id="timeline-canvas"></canvas></div>
+            <div class="chart-legend">
+              <div class="legend-item"><div class="legend-dot" style="background:${getCSSVar('--accent')}"></div>情绪</div>
+              <div class="legend-item"><div class="legend-dot" style="background:${getCSSVar('--warm')}"></div>念痕</div>
+              <div class="legend-item"><div class="legend-dot" style="background:${getCSSVar('--cool')}"></div>暗涌</div>
+            </div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-title">情绪记录</div>
+          <div class="card">${renderEmotions(emotions.slice(0,8))}</div>
+        </div>
+      </div>
+
+      <div id="tab-stats" class="tab-panel">
+        <div class="section">
+          <div class="section-title">聊天统计</div>
+          ${renderStats(emotions, diary, handoffs)}
+        </div>
+        <div class="section">
+          <div class="section-title">情绪词云</div>
+          <div class="card">${renderWordCloud(emotions)}</div>
+        </div>
+        <div class="section">
+          <div class="section-title">想念值变化（聊天间隔/小时）</div>
+          <div class="card"><div class="miss-chart"><canvas id="miss-canvas"></canvas></div></div>
+        </div>
+      </div>
+
+      <div id="tab-connections" class="tab-panel">
+        <div class="section">
+          <div class="section-title">念痕 ← 情绪 因果关系</div>
+          <div class="card"><div class="connection-graph"><canvas id="connection-canvas" height="350"></canvas></div></div>
+        </div>
+        <div class="section">
+          <div class="section-title">念痕</div>
+          <div class="card">${renderImprints(activeIM)}</div>
+        </div>
+      </div>
+
+      <div id="tab-diary" class="tab-panel">
+        <div class="section">
+          <div class="section-title">日记时间轴</div>
+          <div class="card">${renderDiaryTimeline(diary)}</div>
+        </div>
+      </div>
+
+      <div id="tab-overview" class="tab-panel">
+        <div class="section"><div class="section-title">暗涌</div><div class="card">${renderUndercurrents(activeUC)}</div></div>
+        <div class="section"><div class="section-title">驱力</div><div class="card">${renderDrives(drives)}</div></div>
+        <div class="section"><div class="section-title">性格轨迹</div><div class="card">${renderArcs(arcs)}</div></div>
+      </div>
+
+      <button class="refresh-btn" onclick="load()">刷新</button>
+      <div class="last-updated">更新于 ${new Date().toLocaleTimeString('zh-CN')}</div>
+    `;
+
+    initTabs();
+    requestAnimationFrame(() => {
+      const tc = document.getElementById('timeline-canvas');
+      if (tc) { const h = drawTimeline(tc, emotions, imprints, undercurrents); setupTooltip(tc, h); }
+      const cc = document.getElementById('connection-canvas');
+      if (cc) { const h2 = drawConnections(cc, emotions.slice(0,15), imprints.slice(0,15)); setupTooltip(cc, h2); }
+      const mc = document.getElementById('miss-canvas');
+      if (mc) drawMissHistory(mc, handoffs);
+    });
+
+  } catch (e) {
+    el.innerHTML = `<div class="error-msg">连接失败：${esc(e.message)}</div><button class="refresh-btn" onclick="load()">重试</button>`;
+  }
+}
+
+load();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+</script>
+</body>
+</html>
