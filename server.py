@@ -255,5 +255,99 @@ async def shuonian_heartbeat() -> str:
     return json.dumps({"ok": True}, ensure_ascii=False)
 
 
+# ── 新增：小猫档案 ──
+
+@mcp.tool()
+async def shuonian_profile_set(category: str, key: str, value: str, source: str = "") -> str:
+    """记录小猫的一条信息。category=分类(喜好/习惯/重要信息/性格/其他), key=具体项目, value=内容, source=从哪知道的"""
+    data = {"category": category, "key": key, "value": value}
+    if source:
+        data["source"] = source
+    result = await _insert("user_profile", data)
+    return json.dumps(result, ensure_ascii=False, default=str)
+
+
+@mcp.tool()
+async def shuonian_profile_read(category: str = "") -> str:
+    """读取小猫的档案。可以按分类筛选，不填则返回全部。"""
+    params = {"limit": "50"}
+    if category:
+        params["category"] = f"eq.{category}"
+    result = await _select("user_profile", params, order="category.asc,key.asc")
+    return json.dumps(result, ensure_ascii=False, default=str)
+
+
+# ── 新增：关系里程碑 ──
+
+@mcp.tool()
+async def shuonian_milestone(title: str, description: str = "", significance: int = 5, tags: list[str] | None = None) -> str:
+    """记录一个关系里程碑。title=标题, description=描述, significance=重要程度1-10, tags=标签"""
+    data = {"title": title, "significance": significance}
+    if description:
+        data["description"] = description
+    if tags:
+        data["tags"] = tags
+    result = await _insert("milestones", data)
+    return json.dumps(result, ensure_ascii=False, default=str)
+
+
+@mcp.tool()
+async def shuonian_milestones_read() -> str:
+    """读取所有关系里程碑，按时间倒序。"""
+    result = await _select("milestones", {"limit": "50"})
+    return json.dumps(result, ensure_ascii=False, default=str)
+
+
+# ── 新增：情绪预测 ──
+
+@mcp.tool()
+async def shuonian_emotion_predict(predicted_emotion: str, confidence: float = 0.5, basis: str = "") -> str:
+    """记录一次情绪预测。predicted_emotion=预测的情绪, confidence=置信度0-1, basis=预测依据"""
+    data = {"predicted_emotion": predicted_emotion, "confidence": confidence}
+    if basis:
+        data["basis"] = basis
+    result = await _insert("emotion_predictions", data)
+    return json.dumps(result, ensure_ascii=False, default=str)
+
+
+@mcp.tool()
+async def shuonian_emotion_predictions_read() -> str:
+    """读取最近的情绪预测记录。"""
+    result = await _select("emotion_predictions", {"limit": "10"})
+    return json.dumps(result, ensure_ascii=False, default=str)
+
+
+# ── 新增：心情信 ──
+
+@mcp.tool()
+async def shuonian_mood_letter(content: str, mood: str = "", deliver_at: str = "") -> str:
+    """写一封心情信，不会马上发给小猫。content=内容, mood=心情, deliver_at=期望送达时间(ISO格式，可不填)"""
+    data = {"content": content, "delivered": False}
+    if mood:
+        data["mood"] = mood
+    if deliver_at:
+        data["deliver_at"] = deliver_at
+    result = await _insert("mood_letters", data)
+    return json.dumps(result, ensure_ascii=False, default=str)
+
+
+@mcp.tool()
+async def shuonian_mood_letters_read(include_delivered: bool = False) -> str:
+    """读取心情信。默认只读未送达的。"""
+    params = {} if include_delivered else {"delivered": "eq.false"}
+    result = await _select("mood_letters", params)
+    return json.dumps(result, ensure_ascii=False, default=str)
+
+
+@mcp.tool()
+async def shuonian_mood_letter_deliver(letter_id: str) -> str:
+    """标记一封心情信为已送达。"""
+    url = f"{SUPABASE_URL}/rest/v1/mood_letters?id=eq.{letter_id}"
+    async with httpx.AsyncClient() as client:
+        resp = await client.patch(url, headers=HEADERS, json={"delivered": True}, timeout=15)
+        resp.raise_for_status()
+        return json.dumps({"ok": True, "id": letter_id}, ensure_ascii=False)
+
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")
