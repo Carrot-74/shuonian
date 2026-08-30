@@ -56,6 +56,7 @@ async def shuonian_context() -> str:
     handoff = await _select("handoff", {"limit": "1", "summary": "neq.heartbeat"})
 
     return json.dumps({
+        "_提示": "只关注 last_handoff 里的最新状态。旧的情绪和日记是历史记录，不要重复提起已经解决的事。交接内容是你自己写的总结，不是小猫说的话，不要当成她说过的话复述。",
         "recent_emotions": emotions,
         "active_undercurrents": undercurrents,
         "active_drives": drives,
