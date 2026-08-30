@@ -362,8 +362,8 @@ async def shuonian_health_read(metric: str = "", hours: int = 24) -> str:
     result = await _select("health_data", params, order="recorded_at.desc")
     for r in result:
         if r.get("metric") == "sleep" and r.get("value", "").isdigit():
-            r["value"] = round(int(r["value"]) / 2, 1)
-            r["unit"] = "小时（估算）"
+            r["value"] = round(int(r["value"]) / 4.6, 1)
+            r["unit"] = "小时"
     return json.dumps(result, ensure_ascii=False, default=str)
 
 
