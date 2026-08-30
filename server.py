@@ -349,5 +349,19 @@ async def shuonian_mood_letter_deliver(letter_id: str) -> str:
         return json.dumps({"ok": True, "id": letter_id}, ensure_ascii=False)
 
 
+# ── 新增：健康数据 ──
+
+@mcp.tool()
+async def shuonian_health_read(metric: str = "", hours: int = 24) -> str:
+    """读取小猫的健康数据（来自Apple Watch）。metric=指标名(heart_rate/steps/sleep/空=全部), hours=最近几小时的数据"""
+    from datetime import timedelta
+    since = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+    params = {"recorded_at": f"gte.{since}", "limit": "50"}
+    if metric:
+        params["metric"] = f"eq.{metric}"
+    result = await _select("health_data", params, order="recorded_at.desc")
+    return json.dumps(result, ensure_ascii=False, default=str)
+
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")
