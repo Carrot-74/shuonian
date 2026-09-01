@@ -365,11 +365,17 @@ async def shuonian_health_read(metric: str = "", hours: int = 24) -> str:
             try:
                 starts = r["value"].strip().split("\n")
                 ends = r.get("unit", "").strip().split("\n")
-                total_min = 0
+                pairs = []
                 for s, e in zip(starts, ends):
                     st = datetime.strptime(s.strip(), "%d %b %Y at %I:%M %p")
                     et = datetime.strptime(e.strip(), "%d %b %Y at %I:%M %p")
-                    total_min += (et - st).total_seconds() / 60
+                    pairs.append((st, et))
+                # only keep the most recent night (fragments within 12h of the latest)
+                latest = max(et for _, et in pairs)
+                total_min = 0
+                for st, et in pairs:
+                    if (latest - st).total_seconds() < 43200:  # 12 hours
+                        total_min += (et - st).total_seconds() / 60
                 r["value"] = round(total_min / 60, 1)
                 r["unit"] = "小时"
             except Exception:
