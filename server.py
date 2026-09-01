@@ -361,9 +361,19 @@ async def shuonian_health_read(metric: str = "", hours: int = 24) -> str:
         params["metric"] = f"eq.{metric}"
     result = await _select("health_data", params, order="recorded_at.desc")
     for r in result:
-        if r.get("metric") == "sleep" and r.get("value", "").isdigit():
-            r["value"] = round(int(r["value"]) / 4.6, 1)
-            r["unit"] = "小时"
+        if r.get("metric") == "sleep" and "\n" in r.get("value", ""):
+            try:
+                starts = r["value"].strip().split("\n")
+                ends = r.get("unit", "").strip().split("\n")
+                total_min = 0
+                for s, e in zip(starts, ends):
+                    st = datetime.strptime(s.strip(), "%d %b %Y at %I:%M %p")
+                    et = datetime.strptime(e.strip(), "%d %b %Y at %I:%M %p")
+                    total_min += (et - st).total_seconds() / 60
+                r["value"] = round(total_min / 60, 1)
+                r["unit"] = "小时"
+            except Exception:
+                pass
     return json.dumps(result, ensure_ascii=False, default=str)
 
 
