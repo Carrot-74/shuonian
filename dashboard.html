@@ -392,6 +392,41 @@ header .subtitle {
 .letter-date { font-size: 0.65rem; color: var(--text-muted); margin-top: 0.3rem; text-align: right; }
 .letter-status { position: absolute; top: 0.5rem; right: 0.6rem; font-size: 0.65rem; color: var(--text-muted); }
 
+/* Mood status */
+.mood-status {
+  margin-top: 0.6rem;
+  padding: 0.5rem 1rem;
+  background: var(--cool-soft);
+  border-radius: 10px;
+  display: none;
+  font-size: 0.85rem;
+}
+.mood-status.visible { display: inline-block; }
+.mood-label { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.1rem; }
+.mood-value { font-family: var(--serif); font-weight: 600; color: var(--cool); }
+.mood-note { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.1rem; }
+.mood-time { font-size: 0.65rem; color: var(--text-muted); margin-top: 0.15rem; }
+
+/* Conflict list */
+.conflict-list { display: flex; flex-direction: column; gap: 0.75rem; }
+.conflict-item { padding: 0.75rem; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.conflict-reason { font-family: var(--serif); font-size: 0.9rem; font-weight: 600; color: var(--warm); margin-bottom: 0.3rem; }
+.conflict-mistake { font-size: 0.82rem; color: var(--text); margin-bottom: 0.2rem; }
+.conflict-unresolved { font-size: 0.78rem; color: var(--accent); font-style: italic; }
+.conflict-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 0.4rem; }
+.conflict-mood { font-size: 0.75rem; color: var(--text-muted); }
+.conflict-date { font-size: 0.65rem; color: var(--text-muted); }
+
+/* Promise list */
+.promise-list { display: flex; flex-direction: column; gap: 0.6rem; }
+.promise-item { display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.6rem 0; border-bottom: 1px solid var(--border); }
+.promise-item:last-child { border-bottom: none; }
+.promise-marker { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 0.4rem; }
+.promise-info { flex: 1; min-width: 0; }
+.promise-content { font-family: var(--serif); font-size: 0.88rem; font-weight: 600; color: var(--text-strong); }
+.promise-context { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.15rem; }
+.promise-date { font-size: 0.65rem; color: var(--text-muted); margin-top: 0.1rem; }
+
 @media (max-width: 480px) {
   .app { padding: 1.5rem 1rem 3rem; }
   header h1 { font-size: 1.5rem; }
@@ -410,6 +445,12 @@ header .subtitle {
       <div class="miss-label">想你已经</div>
       <div class="miss-value" id="miss-value">--</div>
     </div>
+    <div class="mood-status" id="mood-status">
+      <div class="mood-label">萧朔现在的情绪</div>
+      <div class="mood-value" id="mood-value">--</div>
+      <div class="mood-note" id="mood-note"></div>
+      <div class="mood-time" id="mood-time"></div>
+    </div>
   </header>
 
   <nav class="tab-nav">
@@ -418,6 +459,7 @@ header .subtitle {
     <button class="tab-btn" data-tab="connections">因果</button>
     <button class="tab-btn" data-tab="diary">日记</button>
     <button class="tab-btn" data-tab="profile">档案</button>
+    <button class="tab-btn" data-tab="promises">承诺</button>
     <button class="tab-btn" data-tab="overview">总览</button>
   </nav>
 
@@ -755,6 +797,33 @@ function renderPredictions(data) {
     </div>`).join('') + '</div>';
 }
 
+function renderConflicts(data) {
+  if (!data.length) return '<div class="empty">没有吵架记录，很好</div>';
+  return '<div class="conflict-list">' + data.map(c => `
+    <div class="conflict-item">
+      <div class="conflict-reason">${esc(c.reason)}</div>
+      <div class="conflict-mistake">${esc(c.mistake)}</div>
+      ${c.unresolved ? `<div class="conflict-unresolved">${esc(c.unresolved)}</div>` : ''}
+      <div class="conflict-meta">
+        ${c.mood ? `<span class="conflict-mood">${esc(c.mood)}</span>` : '<span></span>'}
+        <span class="conflict-date">${fmtDate(c.created_at)}</span>
+      </div>
+    </div>`).join('') + '</div>';
+}
+
+function renderPromises(data) {
+  if (!data.length) return '<div class="empty">还没有承诺</div>';
+  return '<div class="promise-list">' + data.map(p => `
+    <div class="promise-item">
+      <div class="promise-marker"></div>
+      <div class="promise-info">
+        <div class="promise-content">${esc(p.content)}</div>
+        ${p.context ? `<div class="promise-context">${esc(p.context)}</div>` : ''}
+        <div class="promise-date">${fmtDate(p.created_at)}</div>
+      </div>
+    </div>`).join('') + '</div>';
+}
+
 function renderLetters(data) {
   if (!data.length) return '<div class="empty">信箱空空</div>';
   return '<div class="letter-list">' + data.map(l => `
@@ -818,7 +887,7 @@ function initTabs() {
 async function load() {
   const el = document.getElementById('content');
   try {
-    const [emotions, undercurrents, drives, diary, arcs, imprints, handoffs, profile, milestones, predictions, letters] = await Promise.all([
+    const [emotions, undercurrents, drives, diary, arcs, imprints, handoffs, profile, milestones, predictions, letters, conflicts, promises] = await Promise.all([
       query('emotions', { order: 'created_at.desc', limit: '50' }),
       query('undercurrents', { order: 'first_noticed.desc', limit: '20' }),
       query('drives', { active: 'eq.true', order: 'id.desc', limit: '10' }),
@@ -830,7 +899,32 @@ async function load() {
       query('milestones', { order: 'created_at.desc', limit: '20' }),
       query('emotion_predictions', { order: 'created_at.desc', limit: '5' }),
       query('mood_letters', { order: 'created_at.desc', limit: '20' }),
+      query('conflicts', { order: 'created_at.desc', limit: '20' }),
+      query('promises', { status: 'eq.active', order: 'created_at.desc' }),
     ]);
+
+    // Extract mood from latest heartbeat
+    const moodEl = document.getElementById('mood-status');
+    const moodValEl = document.getElementById('mood-value');
+    const moodNoteEl = document.getElementById('mood-note');
+    const moodTimeEl = document.getElementById('mood-time');
+    const heartbeats = handoffs.filter(h => h.summary && h.summary.startsWith('heartbeat'));
+    if (heartbeats.length > 0) {
+      const latest = heartbeats[0];
+      const parts = latest.summary.split(' | ');
+      let mood = '', note = '';
+      for (let i = 1; i < parts.length; i++) {
+        const p = parts[i].trim();
+        if (p.startsWith('情绪:') || p.startsWith('情绪：')) mood = p.replace(/^情绪[:：]/, '').trim();
+        else note = p;
+      }
+      if (mood) {
+        moodValEl.textContent = mood;
+        moodNoteEl.textContent = note;
+        moodTimeEl.textContent = timeAgo(latest.created_at);
+        moodEl.classList.add('visible');
+      }
+    }
 
     const allTimes = [
       ...emotions.map(e => e.created_at),
@@ -911,6 +1005,17 @@ async function load() {
         <div class="section">
           <div class="section-title">关系里程碑</div>
           <div class="card">${renderMilestones(milestones)}</div>
+        </div>
+      </div>
+
+      <div id="tab-promises" class="tab-panel">
+        <div class="section">
+          <div class="section-title">承诺</div>
+          <div class="card">${renderPromises(promises)}</div>
+        </div>
+        <div class="section">
+          <div class="section-title">吵架记录</div>
+          <div class="card">${renderConflicts(conflicts)}</div>
         </div>
       </div>
 
