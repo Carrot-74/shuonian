@@ -536,7 +536,11 @@ header .subtitle {
 </div>
 
 <script>
-const PASS_HASH = '0418';
+const PASS_HASH = 'e199e876c25e6cea55393968e59c89dc394613521eb37734ce60ce53cd3c2d78';
+async function hashPass(pass) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
 function checkAuth() {
   try { if (localStorage.getItem('sn_auth') === PASS_HASH) return true; } catch(e) {}
   return false;
@@ -551,17 +555,21 @@ if (checkAuth()) {
 } else {
   const inp = document.getElementById('lock-input');
   const err = document.getElementById('lock-error');
-  inp.addEventListener('input', () => {
-    if (inp.value === PASS_HASH) {
+  inp.addEventListener('input', async () => {
+    const h = await hashPass(inp.value);
+    if (h === PASS_HASH) {
       try { localStorage.setItem('sn_auth', PASS_HASH); } catch(e) {}
       unlock();
     }
   });
-  inp.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && inp.value !== PASS_HASH) {
-      err.textContent = '密码不对';
-      inp.classList.add('shake');
-      setTimeout(() => inp.classList.remove('shake'), 400);
+  inp.addEventListener('keydown', async (e) => {
+    if (e.key === 'Enter') {
+      const h = await hashPass(inp.value);
+      if (h !== PASS_HASH) {
+        err.textContent = '密码不对';
+        inp.classList.add('shake');
+        setTimeout(() => inp.classList.remove('shake'), 400);
+      }
     }
   });
   inp.focus();
