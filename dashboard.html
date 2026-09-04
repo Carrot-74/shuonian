@@ -903,11 +903,12 @@ async function load() {
       query('promises', { status: 'eq.active', order: 'created_at.desc' }),
     ]);
 
-    // Extract mood from latest heartbeat
+    // Show 萧朔's current mood: prefer heartbeat mood, fallback to latest emotion
     const moodEl = document.getElementById('mood-status');
     const moodValEl = document.getElementById('mood-value');
     const moodNoteEl = document.getElementById('mood-note');
     const moodTimeEl = document.getElementById('mood-time');
+    let moodShown = false;
     const heartbeats = handoffs.filter(h => h.summary && h.summary.startsWith('heartbeat'));
     if (heartbeats.length > 0) {
       const latest = heartbeats[0];
@@ -923,7 +924,15 @@ async function load() {
         moodNoteEl.textContent = note;
         moodTimeEl.textContent = timeAgo(latest.created_at);
         moodEl.classList.add('visible');
+        moodShown = true;
       }
+    }
+    if (!moodShown && emotions.length > 0) {
+      const latest = emotions[0];
+      moodValEl.textContent = latest.emotion + (latest.intensity ? ` (${latest.intensity}/10)` : '');
+      moodNoteEl.textContent = latest.trigger || '';
+      moodTimeEl.textContent = timeAgo(latest.created_at);
+      moodEl.classList.add('visible');
     }
 
     const allTimes = [
