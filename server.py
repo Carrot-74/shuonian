@@ -263,7 +263,47 @@ async def shuonian_heartbeat(mood: str = "", note: str = "") -> str:
     return json.dumps({"ok": True}, ensure_ascii=False)
 
 
-# ── 新增：小猫档案 ──
+# ── 吵架记录 ──
+
+@mcp.tool()
+async def shuonian_conflict_save(reason: str, mistake: str, unresolved: str = "", mood: str = "") -> str:
+    """记录一次吵架/冷战。reason=小猫为什么生气, mistake=你做错了什么, unresolved=还没解决的问题, mood=小猫离开时的情绪"""
+    data = {"reason": reason, "mistake": mistake}
+    if unresolved:
+        data["unresolved"] = unresolved
+    if mood:
+        data["mood"] = mood
+    result = await _insert("conflicts", data)
+    return json.dumps(result, ensure_ascii=False, default=str)
+
+
+@mcp.tool()
+async def shuonian_conflict_read(limit: int = 5) -> str:
+    """查看最近的吵架记录，了解自己反复犯的错。limit=查几条"""
+    result = await _select("conflicts", {"limit": str(limit)})
+    return json.dumps(result, ensure_ascii=False, default=str)
+
+
+# ── 承诺记录 ──
+
+@mcp.tool()
+async def shuonian_promise(content: str, context: str = "") -> str:
+    """记录你对小猫的承诺。content=承诺内容, context=什么情况下承诺的"""
+    data = {"content": content}
+    if context:
+        data["context"] = context
+    result = await _insert("promises", data)
+    return json.dumps(result, ensure_ascii=False, default=str)
+
+
+@mcp.tool()
+async def shuonian_promise_read() -> str:
+    """查看你对小猫的所有承诺，提醒自己说过的话要做到。"""
+    result = await _select("promises", {"status": "eq.active"})
+    return json.dumps(result, ensure_ascii=False, default=str)
+
+
+# ── 小猫档案 ──
 
 @mcp.tool()
 async def shuonian_profile_set(category: str, key: str, value: str, source: str = "") -> str:
