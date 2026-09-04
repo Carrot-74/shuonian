@@ -90,23 +90,30 @@ header .subtitle {
   letter-spacing: 0.04em;
 }
 
-.miss-counter {
+.header-cards {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
   margin-top: 0.75rem;
-  padding: 0.6rem 1rem;
+  flex-wrap: wrap;
+}
+
+.miss-counter {
+  padding: 0.5rem 1rem;
   background: var(--accent-soft);
   border-radius: 10px;
-  display: inline-block;
+  flex: 0 1 auto;
 }
 
 .miss-label {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: var(--text-muted);
-  margin-bottom: 0.15rem;
+  margin-bottom: 0.1rem;
 }
 
 .miss-value {
   font-family: var(--serif);
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--accent);
   font-variant-numeric: tabular-nums;
@@ -394,18 +401,16 @@ header .subtitle {
 
 /* Mood status */
 .mood-status {
-  margin-top: 0.6rem;
   padding: 0.5rem 1rem;
   background: var(--cool-soft);
   border-radius: 10px;
   display: none;
-  font-size: 0.85rem;
+  text-align: center;
+  flex: 0 1 auto;
 }
-.mood-status.visible { display: inline-block; }
+.mood-status.visible { display: block; }
 .mood-label { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.1rem; }
-.mood-value { font-family: var(--serif); font-weight: 600; color: var(--cool); }
-.mood-note { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.1rem; }
-.mood-time { font-size: 0.65rem; color: var(--text-muted); margin-top: 0.15rem; }
+.mood-value { font-family: var(--serif); font-size: 1rem; font-weight: 600; color: var(--cool); }
 
 /* Conflict list */
 .conflict-list { display: flex; flex-direction: column; gap: 0.75rem; }
@@ -441,15 +446,15 @@ header .subtitle {
   <header>
     <h1>朔 念</h1>
     <div class="subtitle"><span class="status-dot"></span>萧朔的内心世界</div>
-    <div class="miss-counter" id="miss-counter" style="display:none">
-      <div class="miss-label">想你已经</div>
-      <div class="miss-value" id="miss-value">--</div>
-    </div>
-    <div class="mood-status" id="mood-status">
-      <div class="mood-label">萧朔现在的情绪</div>
-      <div class="mood-value" id="mood-value">--</div>
-      <div class="mood-note" id="mood-note"></div>
-      <div class="mood-time" id="mood-time"></div>
+    <div class="header-cards">
+      <div class="miss-counter" id="miss-counter" style="display:none">
+        <div class="miss-label">想你已经</div>
+        <div class="miss-value" id="miss-value">--</div>
+      </div>
+      <div class="mood-status" id="mood-status">
+        <div class="mood-label">萧朔现在</div>
+        <div class="mood-value" id="mood-value">--</div>
+      </div>
     </div>
   </header>
 
@@ -906,32 +911,23 @@ async function load() {
     // Show 萧朔's current mood: prefer heartbeat mood, fallback to latest emotion
     const moodEl = document.getElementById('mood-status');
     const moodValEl = document.getElementById('mood-value');
-    const moodNoteEl = document.getElementById('mood-note');
-    const moodTimeEl = document.getElementById('mood-time');
     let moodShown = false;
     const heartbeats = handoffs.filter(h => h.summary && h.summary.startsWith('heartbeat'));
     if (heartbeats.length > 0) {
       const latest = heartbeats[0];
       const parts = latest.summary.split(' | ');
-      let mood = '', note = '';
       for (let i = 1; i < parts.length; i++) {
         const p = parts[i].trim();
-        if (p.startsWith('情绪:') || p.startsWith('情绪：')) mood = p.replace(/^情绪[:：]/, '').trim();
-        else note = p;
-      }
-      if (mood) {
-        moodValEl.textContent = mood;
-        moodNoteEl.textContent = note;
-        moodTimeEl.textContent = timeAgo(latest.created_at);
-        moodEl.classList.add('visible');
-        moodShown = true;
+        if (p.startsWith('情绪:') || p.startsWith('情绪：')) {
+          moodValEl.textContent = p.replace(/^情绪[:：]/, '').trim();
+          moodEl.classList.add('visible');
+          moodShown = true;
+          break;
+        }
       }
     }
     if (!moodShown && emotions.length > 0) {
-      const latest = emotions[0];
-      moodValEl.textContent = latest.emotion + (latest.intensity ? ` (${latest.intensity}/10)` : '');
-      moodNoteEl.textContent = latest.trigger || '';
-      moodTimeEl.textContent = timeAgo(latest.created_at);
+      moodValEl.textContent = emotions[0].emotion;
       moodEl.classList.add('visible');
     }
 
