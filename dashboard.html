@@ -432,6 +432,53 @@ header .subtitle {
 .promise-context { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.15rem; }
 .promise-date { font-size: 0.65rem; color: var(--text-muted); margin-top: 0.1rem; }
 
+/* Lock screen */
+.lock-screen {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.lock-screen.hidden { display: none; }
+.lock-title {
+  font-family: var(--serif);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  margin-bottom: 0.5rem;
+}
+.lock-sub {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 1.5rem;
+}
+.lock-input {
+  width: 160px;
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-strong);
+  font-family: var(--sans);
+  font-size: 1.1rem;
+  text-align: center;
+  letter-spacing: 0.3em;
+  outline: none;
+}
+.lock-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.lock-input.shake { animation: shake 0.4s ease; }
+@keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-6px)} 40%,80%{transform:translateX(6px)} }
+.lock-error {
+  font-size: 0.75rem;
+  color: var(--warm);
+  margin-top: 0.5rem;
+  min-height: 1.2em;
+}
+
 @media (max-width: 480px) {
   .app { padding: 1.5rem 1rem 3rem; }
   header h1 { font-size: 1.5rem; }
@@ -442,7 +489,14 @@ header .subtitle {
 </style>
 </head>
 <body>
-<div class="app">
+<div class="lock-screen" id="lock-screen">
+  <div class="lock-title">朔 念</div>
+  <div class="lock-sub">请输入密码</div>
+  <input class="lock-input" id="lock-input" type="password" maxlength="10" inputmode="numeric" autocomplete="off">
+  <div class="lock-error" id="lock-error"></div>
+</div>
+
+<div class="app" id="app" style="display:none">
   <header>
     <h1>朔 念</h1>
     <div class="subtitle"><span class="status-dot"></span>萧朔的内心世界</div>
@@ -482,6 +536,37 @@ header .subtitle {
 </div>
 
 <script>
+const PASS_HASH = '0418';
+function checkAuth() {
+  try { if (localStorage.getItem('sn_auth') === PASS_HASH) return true; } catch(e) {}
+  return false;
+}
+function unlock() {
+  document.getElementById('lock-screen').classList.add('hidden');
+  document.getElementById('app').style.display = '';
+  load();
+}
+if (checkAuth()) {
+  unlock();
+} else {
+  const inp = document.getElementById('lock-input');
+  const err = document.getElementById('lock-error');
+  inp.addEventListener('input', () => {
+    if (inp.value === PASS_HASH) {
+      try { localStorage.setItem('sn_auth', PASS_HASH); } catch(e) {}
+      unlock();
+    }
+  });
+  inp.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && inp.value !== PASS_HASH) {
+      err.textContent = '密码不对';
+      inp.classList.add('shake');
+      setTimeout(() => inp.classList.remove('shake'), 400);
+    }
+  });
+  inp.focus();
+}
+
 const SUPABASE_URL = 'https://tuuuowmdouiwtokachpu.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1dXVvd21kb3Vpd3Rva2FjaHB1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0NzYxMzMsImV4cCI6MjEwMTA1MjEzM30.MeYKj8ChZJriUUqOy4QR6wM4sZWZEDPD7anBZoHmNE0';
 
@@ -1049,7 +1134,6 @@ async function load() {
   }
 }
 
-load();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
 </script>
 </body>
