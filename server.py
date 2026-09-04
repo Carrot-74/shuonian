@@ -249,9 +249,17 @@ async def shuonian_time() -> str:
 
 
 @mcp.tool()
-async def shuonian_heartbeat() -> str:
-    """轻量心跳，告诉朔念你还在聊天。"""
-    await _insert("handoff", {"summary": "heartbeat"})
+async def shuonian_heartbeat(mood: str = "", note: str = "") -> str:
+    """心跳：告诉朔念你还在聊天，同时记录你现在的情绪。mood=你当前的情绪, note=简短备注（在聊什么、气氛怎么样）"""
+    data = {"summary": "heartbeat"}
+    if mood or note:
+        parts = []
+        if mood:
+            parts.append(f"情绪:{mood}")
+        if note:
+            parts.append(note)
+        data["summary"] = "heartbeat | " + " | ".join(parts)
+    await _insert("handoff", data)
     return json.dumps({"ok": True}, ensure_ascii=False)
 
 
