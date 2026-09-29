@@ -711,9 +711,9 @@ function drawEmotionFlower(containerEl, emotions) {
     name, avg: d.count ? d.total / d.count : 0, count: d.count, max: d.max
   }));
   const n = cats.length;
-  const size = 280;
+  const size = 260;
   const cx = size / 2, cy = size / 2;
-  const baseLen = 55, maxExtra = 40, petalW = 18;
+  const petalLen = 50, petalW = 16, tipR = 5;
 
   let svg = `<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:${size}px;margin:0 auto;display:block;">`;
   svg += `<defs><radialGradient id="fc" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#fff"/><stop offset="100%" stop-color="#f0dde3"/></radialGradient></defs>`;
@@ -722,17 +722,18 @@ function drawEmotionFlower(containerEl, emotions) {
   cats.forEach((c, i) => {
     const angle = (i / n) * 360;
     const val = c.count > 0 ? c.avg : 0;
-    const len = baseLen + (val / 10) * maxExtra;
+    const len = petalLen;
     const w = petalW;
+    const r = tipR;
     const rad = ((angle - 90) * Math.PI) / 180;
-    const labelR = baseLen + maxExtra + 14;
+    const labelR = petalLen + 30 + 14;
     const lx = Math.cos(rad) * labelR;
     const ly = Math.sin(rad) * labelR;
-    const opacity = c.count > 0 ? 0.45 + (val / 10) * 0.4 : 0.3;
+    const opacity = c.count > 0 ? 0.5 + (val / 10) * 0.35 : 0.35;
     const fill = '#d4a0ac';
 
     svg += `<g transform="rotate(${angle})">`;
-    svg += `<path d="M 0,0 Q ${w},-${len*0.5} 0,-${len} Q -${w},-${len*0.5} 0,0 Z" fill="${fill}" opacity="${opacity.toFixed(2)}"/>`;
+    svg += `<path d="M 0,0 C ${w},-${(len*0.35).toFixed(1)} ${w},-${(len-r).toFixed(1)} ${r},-${len.toFixed(1)} A ${r} ${r} 0 0 1 -${r},-${len.toFixed(1)} C -${w},-${(len-r).toFixed(1)} -${w},-${(len*0.35).toFixed(1)} 0,0 Z" fill="${fill}" opacity="${opacity.toFixed(2)}"/>`;
     svg += `</g>`;
     svg += `<text x="${lx.toFixed(1)}" y="${(ly+4).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="500" fill="var(--text-secondary)">${c.name}</text>`;
   });
