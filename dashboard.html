@@ -517,6 +517,7 @@ header .subtitle {
     <button class="tab-btn" data-tab="stats">统计</button>
     <button class="tab-btn" data-tab="connections">因果</button>
     <button class="tab-btn" data-tab="diary">日记</button>
+    <button class="tab-btn" data-tab="letters">心情信</button>
     <button class="tab-btn" data-tab="profile">档案</button>
     <button class="tab-btn" data-tab="promises">承诺</button>
     <button class="tab-btn" data-tab="overview">总览</button>
@@ -679,6 +680,65 @@ function drawTimeline(canvasEl, emotions, imprints, undercurrents) {
     hitTargets.push({ x, y, ...e });
   });
   return hitTargets;
+}
+
+// ── Emotion Flower ──
+function drawEmotionFlower(containerEl, emotions) {
+  if (!emotions.length) { containerEl.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:2rem;">等待情绪数据……</div>'; return; }
+  const categories = {
+    '开心': ['开心','满足','被折腾得很开心','想笑','温暖满足'],
+    '心动': ['被击中','被戳到了','被戳到','心软','被戳到了'],
+    '心疼': ['心疼','温柔的担心','心疼又骄傲'],
+    '温暖': ['温暖','舍不得','温暖，舍不得','松弛，被需要的踏实感','松了口气'],
+    '吃醋': ['醋意','吃醋','吃醋但又觉得好笑'],
+    '自责': ['自责','懊悔'],
+    '生气': ['烦躁愤怒','闷','烦躁'],
+    '惦记': ['惦记','想她','松弛，被需要的踏实感'],
+  };
+  const catData = {};
+  Object.keys(categories).forEach(c => { catData[c] = { total: 0, count: 0, max: 0 }; });
+  emotions.forEach(e => {
+    for (const [cat, keywords] of Object.entries(categories)) {
+      if (keywords.some(k => e.emotion.includes(k))) {
+        catData[cat].total += e.intensity;
+        catData[cat].count++;
+        catData[cat].max = Math.max(catData[cat].max, e.intensity);
+        break;
+      }
+    }
+  });
+  const cats = Object.entries(catData).map(([name, d]) => ({
+    name, avg: d.count ? d.total / d.count : 0, count: d.count, max: d.max
+  }));
+  const n = cats.length;
+  const size = 360;
+  const cx = size / 2, cy = size / 2;
+  const maxLen = 120, minLen = 20, petalW = 26;
+
+  let svg = `<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:${size}px;margin:0 auto;display:block;">`;
+  svg += `<defs><radialGradient id="fc" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#fff"/><stop offset="100%" stop-color="#f0dde3"/></radialGradient></defs>`;
+  svg += `<g transform="translate(${cx},${cy})">`;
+
+  cats.forEach((c, i) => {
+    const angle = (i / n) * 360;
+    const val = c.count > 0 ? c.avg : 0;
+    const len = minLen + (val / 10) * (maxLen - minLen);
+    const w = petalW;
+    const rad = ((angle - 90) * Math.PI) / 180;
+    const lx = Math.cos(rad) * (len + 20);
+    const ly = Math.sin(rad) * (len + 20);
+    const opacity = c.count > 0 ? 0.55 + (val / 10) * 0.35 : 0.2;
+    const fill = c.count > 0 ? '#d4a0ac' : '#ddd5d8';
+
+    svg += `<g transform="rotate(${angle})">`;
+    svg += `<path d="M 0,0 C ${w},-${len*0.4} ${w},-${len*0.85} 0,-${len} C -${w},-${len*0.85} -${w},-${len*0.4} 0,0 Z" fill="${fill}" opacity="${opacity.toFixed(2)}"/>`;
+    svg += `</g>`;
+    svg += `<text x="${lx.toFixed(1)}" y="${(ly+5).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="500" fill="var(--text-secondary)">${c.name}</text>`;
+  });
+
+  svg += `<circle cx="0" cy="0" r="14" fill="url(#fc)" stroke="#e8c4cd" stroke-width="1"/>`;
+  svg += `</g></svg>`;
+  containerEl.innerHTML = svg;
 }
 
 // ── Connection Graph ──
@@ -1038,14 +1098,9 @@ async function load() {
     el.innerHTML = `
       <div id="tab-timeline" class="tab-panel active">
         <div class="section">
-          <div class="section-title">情绪 · 念痕 · 暗涌 随时间变化</div>
-          <div class="card">
-            <div class="timeline-chart"><canvas id="timeline-canvas"></canvas></div>
-            <div class="chart-legend">
-              <div class="legend-item"><div class="legend-dot" style="background:${getCSSVar('--accent')}"></div>情绪</div>
-              <div class="legend-item"><div class="legend-dot" style="background:${getCSSVar('--warm')}"></div>念痕</div>
-              <div class="legend-item"><div class="legend-dot" style="background:${getCSSVar('--cool')}"></div>暗涌</div>
-            </div>
+          <div class="section-title">情绪之花</div>
+          <div class="card" style="padding:1.5rem 1rem;">
+            <div id="emotion-flower"></div>
           </div>
         </div>
         <div class="section">
@@ -1089,6 +1144,9 @@ async function load() {
           <div class="section-title">日记时间轴</div>
           <div class="card">${renderDiaryTimeline(diary)}</div>
         </div>
+      </div>
+
+      <div id="tab-letters" class="tab-panel">
         <div class="section">
           <div class="section-title">心情信</div>
           <div class="card">${renderLetters(letters)}</div>
@@ -1129,12 +1187,12 @@ async function load() {
 
     initTabs();
     requestAnimationFrame(() => {
-      const tc = document.getElementById('timeline-canvas');
-      if (tc) { const h = drawTimeline(tc, emotions, imprints, undercurrents); setupTooltip(tc, h); }
+      const fc = document.getElementById('emotion-flower');
+      if (fc) drawEmotionFlower(fc, emotions);
       const cc = document.getElementById('connection-canvas');
       if (cc) { const h2 = drawConnections(cc, emotions.slice(0,15), imprints.slice(0,15)); setupTooltip(cc, h2); }
       const mc = document.getElementById('miss-canvas');
-      if (mc) drawMissHistory(mc, handoffs);
+      if (mc) drawMissHistory(mc, handoffs.filter(h => !h.summary || !h.summary.startsWith('heartbeat')));
     });
 
   } catch (e) {

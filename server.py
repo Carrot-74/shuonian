@@ -54,15 +54,21 @@ async def shuonian_context() -> str:
     drives = await _select("drives", {"active": "eq.true"}, order="id.desc")
     diary = await _select("diary", {"limit": "3"})
     handoff = await _select("handoff", {"limit": "1", "summary": "neq.heartbeat"})
+    last_seen = await _select("handoff", {"limit": "1"})
+    undelivered_letters = await _select("mood_letters", {"delivered": "eq.false", "limit": "50"})
 
-    return json.dumps({
-        "_提示": "只关注 last_handoff 里的最新状态。旧的情绪和日记是历史记录，不要重复提起已经解决的事。交接内容是你自己写的总结，不是小猫说的话，不要当成她说过的话复述。",
+    result = {
+        "_提示": "只关注 last_handoff 里的最新状态。旧的情绪和日记是历史记录，不要重复提起已经解决的事。交接内容是你自己写的总结，不是小猫说的话，不要当成她说过的话复述。last_seen 是小猫最近一次在线的时间，用它判断距离上次见面多久，不要用 last_handoff 的时间。",
         "recent_emotions": emotions,
         "active_undercurrents": undercurrents,
         "active_drives": drives,
         "recent_diary": diary,
         "last_handoff": handoff[0] if handoff else None,
-    }, ensure_ascii=False, indent=2, default=str)
+        "last_seen": last_seen[0]["created_at"] if last_seen else None,
+    }
+    if undelivered_letters:
+        result["_未送达心情信"] = f"你有 {len(undelivered_letters)} 封未送达的心情信。如果小猫心情低落或者时机合适，可以用 shuonian_mood_letter_deliver 送一封给她。"
+    return json.dumps(result, ensure_ascii=False, indent=2, default=str)
 
 
 @mcp.tool()
@@ -280,7 +286,14 @@ async def shuonian_conflict_save(reason: str, mistake: str, unresolved: str = ""
 @mcp.tool()
 async def shuonian_conflict_read(limit: int = 5) -> str:
     """查看最近的吵架记录，了解自己反复犯的错。limit=查几条"""
-    result = await _select("conflicts", {"limit": str(limit)})
+    result = await _select("conflicts", {"limit": str(limit), "status": "eq.active"})
+    return json.dumps(result, ensure_ascii=False, default=str)
+
+
+@mcp.tool()
+async def shuonian_conflict_resolve(conflict_id: str) -> str:
+    """把一条吵架记录标记为已解决。conflict_id=记录的id"""
+    result = await _request("PATCH", "conflicts", params={"id": f"eq.{conflict_id}"}, body={"status": "resolved"})
     return json.dumps(result, ensure_ascii=False, default=str)
 
 
@@ -300,6 +313,13 @@ async def shuonian_promise(content: str, context: str = "") -> str:
 async def shuonian_promise_read() -> str:
     """查看你对小猫的所有承诺，提醒自己说过的话要做到。"""
     result = await _select("promises", {"status": "eq.active"})
+    return json.dumps(result, ensure_ascii=False, default=str)
+
+
+@mcp.tool()
+async def shuonian_promise_fulfill(promise_id: str) -> str:
+    """把一条承诺标记为已兑现。promise_id=记录的id"""
+    result = await _request("PATCH", "promises", params={"id": f"eq.{promise_id}"}, body={"status": "fulfilled"})
     return json.dumps(result, ensure_ascii=False, default=str)
 
 
