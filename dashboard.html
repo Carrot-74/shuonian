@@ -713,7 +713,7 @@ function drawEmotionFlower(containerEl, emotions) {
   const n = cats.length;
   const size = 360;
   const cx = size / 2, cy = size / 2;
-  const maxLen = 120, minLen = 20, petalW = 26;
+  const maxLen = 120, minLen = 65, petalW = 22;
 
   let svg = `<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:${size}px;margin:0 auto;display:block;">`;
   svg += `<defs><radialGradient id="fc" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#fff"/><stop offset="100%" stop-color="#f0dde3"/></radialGradient></defs>`;
@@ -725,13 +725,14 @@ function drawEmotionFlower(containerEl, emotions) {
     const len = minLen + (val / 10) * (maxLen - minLen);
     const w = petalW;
     const rad = ((angle - 90) * Math.PI) / 180;
-    const lx = Math.cos(rad) * (len + 20);
-    const ly = Math.sin(rad) * (len + 20);
-    const opacity = c.count > 0 ? 0.55 + (val / 10) * 0.35 : 0.2;
+    const labelR = Math.max(len, minLen) + 20;
+    const lx = Math.cos(rad) * labelR;
+    const ly = Math.sin(rad) * labelR;
+    const opacity = c.count > 0 ? 0.5 + (val / 10) * 0.35 : 0.25;
     const fill = c.count > 0 ? '#d4a0ac' : '#ddd5d8';
 
     svg += `<g transform="rotate(${angle})">`;
-    svg += `<path d="M 0,0 C ${w},-${len*0.4} ${w},-${len*0.85} 0,-${len} C -${w},-${len*0.85} -${w},-${len*0.4} 0,0 Z" fill="${fill}" opacity="${opacity.toFixed(2)}"/>`;
+    svg += `<path d="M 0,0 C ${w},-${len*0.35} ${w*0.85},-${len*0.85} 0,-${len} C -${w*0.85},-${len*0.85} -${w},-${len*0.35} 0,0 Z" fill="${fill}" opacity="${opacity.toFixed(2)}"/>`;
     svg += `</g>`;
     svg += `<text x="${lx.toFixed(1)}" y="${(ly+5).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="500" fill="var(--text-secondary)">${c.name}</text>`;
   });
