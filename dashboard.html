@@ -537,6 +537,11 @@ header .subtitle {
 </div>
 
 <script>
+const SUPABASE_URL = 'https://tuuuowmdouiwtokachpu.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1dXVvd21kb3Vpd3Rva2FjaHB1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0NzYxMzMsImV4cCI6MjEwMTA1MjEzM30.MeYKj8ChZJriUUqOy4QR6wM4sZWZEDPD7anBZoHmNE0';
+
+const hdrs = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' };
+
 const PASS_HASH = 'e199e876c25e6cea55393968e59c89dc394613521eb37734ce60ce53cd3c2d78';
 async function hashPass(pass) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass));
@@ -575,11 +580,6 @@ if (checkAuth()) {
   });
   inp.focus();
 }
-
-const SUPABASE_URL = 'https://tuuuowmdouiwtokachpu.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1dXVvd21kb3Vpd3Rva2FjaHB1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0NzYxMzMsImV4cCI6MjEwMTA1MjEzM30.MeYKj8ChZJriUUqOy4QR6wM4sZWZEDPD7anBZoHmNE0';
-
-const hdrs = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' };
 
 async function query(table, params = {}) {
   const url = new URL(`${SUPABASE_URL}/rest/v1/${table}`);
