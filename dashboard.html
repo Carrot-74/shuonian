@@ -398,6 +398,9 @@ header .subtitle {
 .letter-content { font-family: var(--serif); font-size: 0.85rem; color: var(--text); line-height: 1.6; }
 .letter-date { font-size: 0.65rem; color: var(--text-muted); margin-top: 0.3rem; text-align: right; }
 .letter-status { position: absolute; top: 0.5rem; right: 0.6rem; font-size: 0.65rem; color: var(--text-muted); }
+.letter-deliver-btn { position: absolute; top: 0.5rem; right: 0.5rem; font-size: 0.65rem; padding: 0.2rem 0.5rem; background: var(--accent); color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+.letter-deliver-btn:hover { opacity: 0.85; }
+.letter-deliver-btn:disabled { opacity: 0.5; cursor: default; }
 
 /* Mood status */
 .mood-status {
@@ -707,8 +710,19 @@ function drawEmotionFlower(containerEl, emotions) {
       }
     }
   });
+  const catColors = {
+    '开心': '#f5b971',
+    '心动': '#e88fa5',
+    '心疼': '#c4a0d4',
+    '温暖': '#f0c0a0',
+    '吃醋': '#a8d4a0',
+    '自责': '#9bb8d4',
+    '生气': '#d48a8a',
+    '惦记': '#b0a0d8',
+  };
   const cats = Object.entries(catData).map(([name, d]) => ({
-    name, avg: d.count ? d.total / d.count : 0, count: d.count, max: d.max
+    name, avg: d.count ? d.total / d.count : 0, count: d.count, max: d.max,
+    color: catColors[name] || '#d4a0ac'
   }));
   const n = cats.length;
   const size = 260;
@@ -729,8 +743,8 @@ function drawEmotionFlower(containerEl, emotions) {
     const labelR = petalLen + 30 + 14;
     const lx = Math.cos(rad) * labelR;
     const ly = Math.sin(rad) * labelR;
-    const opacity = c.count > 0 ? 0.5 + (val / 10) * 0.35 : 0.35;
-    const fill = '#d4a0ac';
+    const opacity = c.count > 0 ? 0.5 + (val / 10) * 0.4 : 0.25;
+    const fill = c.color;
 
     svg += `<g transform="rotate(${angle})">`;
     svg += `<path d="M 0,0 C ${w},-${(len*0.35).toFixed(1)} ${w},-${(len-r).toFixed(1)} ${r},-${len.toFixed(1)} A ${r} ${r} 0 0 1 -${r},-${len.toFixed(1)} C -${w},-${(len-r).toFixed(1)} -${w},-${(len*0.35).toFixed(1)} 0,0 Z" fill="${fill}" opacity="${opacity.toFixed(2)}"/>`;
@@ -984,6 +998,18 @@ function renderPromises(data) {
     </div>`).join('') + '</div>';
 }
 
+async function deliverLetter(id, btn) {
+  btn.disabled = true;
+  btn.textContent = '...';
+  const resp = await fetch(`${SUPABASE_URL}/rest/v1/mood_letters?id=eq.${id}`, {
+    method: 'PATCH', headers: hdrs, body: JSON.stringify({ delivered: true })
+  });
+  if (resp.ok) {
+    btn.closest('.letter-item').classList.add('delivered');
+    btn.replaceWith(Object.assign(document.createElement('span'), { className: 'letter-status', textContent: '已送达' }));
+  } else { btn.disabled = false; btn.textContent = '送达'; }
+}
+
 function renderLetters(data) {
   if (!data.length) return '<div class="empty">信箱空空</div>';
   return '<div class="letter-list">' + data.map(l => `
@@ -991,7 +1017,9 @@ function renderLetters(data) {
       ${l.mood ? `<div class="letter-mood">${esc(l.mood)}</div>` : ''}
       <div class="letter-content">${esc(l.content)}</div>
       <div class="letter-date">${fmtDate(l.created_at)}</div>
-      <div class="letter-status">${l.delivered ? '已送达' : '待送达'}</div>
+      ${l.delivered
+        ? '<div class="letter-status">已送达</div>'
+        : `<button class="letter-deliver-btn" onclick="deliverLetter('${l.id}', this)">送达</button>`}
     </div>`).join('') + '</div>';
 }
 
