@@ -743,7 +743,7 @@ function drawEmotionFlower(containerEl, emotions) {
     const labelR = petalLen + 30 + 14;
     const lx = Math.cos(rad) * labelR;
     const ly = Math.sin(rad) * labelR;
-    const opacity = c.count > 0 ? 0.5 + (val / 10) * 0.4 : 0.25;
+    const opacity = c.count > 0 ? 0.35 + (val / 10) * 0.6 : 0.15;
     const fill = c.color;
 
     svg += `<g transform="rotate(${angle})">`;
