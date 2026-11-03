@@ -370,6 +370,7 @@ header .subtitle {
 .profile-row:last-child { border-bottom: none; }
 .profile-key { font-weight: 600; color: var(--text-strong); min-width: 4rem; }
 .profile-val { color: var(--text); flex: 1; }
+.profile-note { color: var(--text-muted, var(--text)); opacity: 0.7; font-size: 0.75rem; margin-left: 0.3rem; }
 
 /* Milestones */
 .milestone-list { display: flex; flex-direction: column; gap: 0.6rem; }
@@ -947,6 +948,21 @@ function renderProfile(data) {
     </div>`).join('');
 }
 
+const SELF_CATEGORIES = ['基本资料', '身体设定', '性格', '喜好', '习惯', '其他'];
+function renderSelf(data) {
+  if (!data.length) return '<div class="empty">萧朔还没写下自己……</div>';
+  const cats = {};
+  data.forEach(p => { if (!cats[p.category]) cats[p.category] = []; cats[p.category].push(p); });
+  const order = [...SELF_CATEGORIES, ...Object.keys(cats).filter(c => !SELF_CATEGORIES.includes(c))];
+  return order.filter(cat => cats[cat]).map(cat => `
+    <div class="profile-category">
+      <div class="profile-cat-title">${esc(cat)}</div>
+      <div class="profile-items">${cats[cat].map(p => `
+        <div class="profile-row"><span class="profile-key">${esc(p.item)}</span><span class="profile-val">${esc(p.content)}${p.note ? `<span class="profile-note">（${esc(p.note)}）</span>` : ''}</span></div>
+      `).join('')}</div>
+    </div>`).join('');
+}
+
 function renderMilestones(data) {
   if (!data.length) return '<div class="empty">故事刚刚开始</div>';
   return '<div class="milestone-list">' + data.map(m => `
@@ -1075,7 +1091,7 @@ function initTabs() {
 async function load() {
   const el = document.getElementById('content');
   try {
-    const [emotions, undercurrents, drives, diary, arcs, imprints, handoffs, profile, milestones, predictions, letters, conflicts, promises] = await Promise.all([
+    const [emotions, undercurrents, drives, diary, arcs, imprints, handoffs, profile, milestones, predictions, letters, conflicts, promises, selfProfile] = await Promise.all([
       query('emotions', { order: 'created_at.desc', limit: '50' }),
       query('undercurrents', { order: 'first_noticed.desc', limit: '20' }),
       query('drives', { active: 'eq.true', order: 'id.desc', limit: '10' }),
@@ -1089,6 +1105,7 @@ async function load() {
       query('mood_letters', { order: 'created_at.desc', limit: '20' }),
       query('conflicts', { order: 'created_at.desc', limit: '20' }),
       query('promises', { status: 'eq.active', order: 'created_at.desc' }),
+      query('shuonian_self', { order: 'category.asc,item.asc', limit: '200' }),
     ]);
 
     // Show 萧朔's current mood: prefer heartbeat mood, fallback to latest emotion
@@ -1187,6 +1204,10 @@ async function load() {
         <div class="section">
           <div class="section-title">小猫档案</div>
           <div class="card">${renderProfile(profile)}</div>
+        </div>
+        <div class="section">
+          <div class="section-title">萧朔的设定</div>
+          <div class="card">${renderSelf(selfProfile)}</div>
         </div>
         <div class="section">
           <div class="section-title">关系里程碑</div>

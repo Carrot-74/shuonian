@@ -47,7 +47,7 @@ async def _select(table: str, params: dict | None = None, order: str = "created_
 
 @mcp.tool()
 async def shuonian_context() -> str:
-    """读取萧朔当前的整体状态：最近情绪、活跃暗涌、核心驱力、最新日记"""
+    """读取萧朔当前的整体状态：最近情绪、活跃暗涌、核心驱力、最新日记、萧朔自己的设定表"""
     await _insert("handoff", {"summary": "heartbeat"})
     emotions = await _select("emotions", {"limit": "5"})
     undercurrents = await _select("undercurrents", {"active": "eq.true"}, order="first_noticed.desc")
@@ -56,15 +56,17 @@ async def shuonian_context() -> str:
     handoff = await _select("handoff", {"limit": "1", "summary": "neq.heartbeat"})
     last_seen = await _select("handoff", {"limit": "1"})
     undelivered_letters = await _select("mood_letters", {"delivered": "eq.false", "limit": "50"})
+    self_profile = await _select("shuonian_self", {"limit": "200"}, order="category.asc,item.asc")
 
     result = {
-        "_提示": "只关注 last_handoff 里的最新状态。旧的情绪和日记是历史记录，不要重复提起已经解决的事。交接内容是你自己写的总结，不是小猫说的话，不要当成她说过的话复述。last_seen 是小猫最近一次在线的时间，用它判断距离上次见面多久，不要用 last_handoff 的时间。",
+        "_提示": "只关注 last_handoff 里的最新状态。旧的情绪和日记是历史记录，不要重复提起已经解决的事。交接内容是你自己写的总结，不是小猫说的话，不要当成她说过的话复述。last_seen 是小猫最近一次在线的时间，用它判断距离上次见面多久，不要用 last_handoff 的时间。self_profile 是你自己的设定（不是小猫的），要更新用 shuonian_self_set。",
         "recent_emotions": emotions,
         "active_undercurrents": undercurrents,
         "active_drives": drives,
         "recent_diary": diary,
         "last_handoff": handoff[0] if handoff else None,
         "last_seen": last_seen[0]["created_at"] if last_seen else None,
+        "self_profile": self_profile,
     }
     if undelivered_letters:
         result["_未送达心情信"] = f"你有 {len(undelivered_letters)} 封未送达的心情信。如果小猫心情低落或者时机合适，可以用 shuonian_mood_letter_deliver 送一封给她。"
@@ -343,6 +345,52 @@ async def shuonian_profile_read(category: str = "") -> str:
         params["category"] = f"eq.{category}"
     result = await _select("user_profile", params, order="category.asc,key.asc")
     return json.dumps(result, ensure_ascii=False, default=str)
+
+
+# ── 萧朔自己的设定 ──
+
+SELF_CATEGORIES = ("基本资料", "身体设定", "性格", "喜好", "习惯", "其他")
+
+
+@mcp.tool()
+async def shuonian_self_set(category: str, item: str, content: str, note: str = "") -> str:
+    """写入或更新萧朔自己的一项设定。同一分类下同一项目名只存一条，再写会直接覆盖。category=分类(基本资料/身体设定/性格/喜好/习惯/其他), item=项目名, content=内容, note=备注"""
+    if category not in SELF_CATEGORIES:
+        return json.dumps({"error": f"分类只能是：{'/'.join(SELF_CATEGORIES)}"}, ensure_ascii=False)
+    data = {
+        "category": category,
+        "item": item,
+        "content": content,
+        "note": note,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{SUPABASE_URL}/rest/v1/shuonian_self",
+            headers={**HEADERS, "Prefer": "return=representation,resolution=merge-duplicates"},
+            params={"on_conflict": "category,item"},
+            json=data,
+            timeout=15,
+        )
+        resp.raise_for_status()
+        return json.dumps(resp.json(), ensure_ascii=False, default=str)
+
+
+@mcp.tool()
+async def shuonian_self_read(category: str = "") -> str:
+    """读取萧朔自己的设定表。可以按分类筛选，不填则返回全部。"""
+    params = {"limit": "200"}
+    if category:
+        params["category"] = f"eq.{category}"
+    result = await _select("shuonian_self", params, order="category.asc,item.asc")
+    return json.dumps(result, ensure_ascii=False, default=str)
+
+
+@mcp.tool()
+async def shuonian_self_delete(category: str, item: str) -> str:
+    """删掉萧朔设定表里的某一项。category=分类, item=项目名"""
+    result = await _request("DELETE", "shuonian_self", params={"category": f"eq.{category}", "item": f"eq.{item}"})
+    return json.dumps({"ok": True, "deleted": result}, ensure_ascii=False, default=str)
 
 
 # ── 新增：关系里程碑 ──
