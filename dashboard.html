@@ -461,18 +461,20 @@ header .subtitle {
   margin-bottom: 1.5rem;
 }
 .lock-input {
-  width: 160px;
+  width: 220px;
   padding: 0.6rem 1rem;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--surface);
   color: var(--text-strong);
   font-family: var(--sans);
-  font-size: 1.1rem;
+  font-size: 1rem;
   text-align: center;
-  letter-spacing: 0.3em;
   outline: none;
 }
+.lock-form { display: flex; flex-direction: column; gap: 0.6rem; align-items: center; }
+.lock-btn { padding: 0.5rem 2rem; border-radius: 999px; border: 1px solid var(--accent); background: var(--accent-soft); color: var(--text-strong); font-size: 0.9rem; cursor: pointer; }
+.lock-btn:disabled { opacity: 0.5; }
 .lock-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .lock-input.shake { animation: shake 0.4s ease; }
 @keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-6px)} 40%,80%{transform:translateX(6px)} }
@@ -495,8 +497,12 @@ header .subtitle {
 <body>
 <div class="lock-screen" id="lock-screen">
   <div class="lock-title">朔 念</div>
-  <div class="lock-sub">请输入密码</div>
-  <input class="lock-input" id="lock-input" type="password" maxlength="10" inputmode="numeric" autocomplete="off">
+  <div class="lock-sub">请登录</div>
+  <form id="lock-form" class="lock-form">
+    <input class="lock-input" id="lock-email" type="email" placeholder="邮箱" autocomplete="username" required>
+    <input class="lock-input" id="lock-input" type="password" placeholder="密码" autocomplete="current-password" required>
+    <button class="lock-btn" type="submit">进入</button>
+  </form>
   <div class="lock-error" id="lock-error"></div>
 </div>
 
@@ -542,53 +548,75 @@ header .subtitle {
 
 <script>
 const SUPABASE_URL = 'https://tuuuowmdouiwtokachpu.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1dXVvd21kb3Vpd3Rva2FjaHB1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0NzYxMzMsImV4cCI6MjEwMTA1MjEzM30.MeYKj8ChZJriUUqOy4QR6wM4sZWZEDPD7anBZoHmNE0';
+const SUPABASE_KEY = 'sb_publishable_J7OxUz0sfh-308IE1YmnCg_EJsqek8c';
+const SESSION_KEY = 'sn_session';
 
-const hdrs = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' };
+let session = null;
+try { session = JSON.parse(localStorage.getItem(SESSION_KEY)); } catch(e) {}
+try { localStorage.removeItem('sn_auth'); } catch(e) {}
 
-const PASS_HASH = 'e199e876c25e6cea55393968e59c89dc394613521eb37734ce60ce53cd3c2d78';
-async function hashPass(pass) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+function saveSession(data) {
+  session = { access_token: data.access_token, refresh_token: data.refresh_token, expires_at: data.expires_at || Math.floor(Date.now() / 1000) + data.expires_in };
+  try { localStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch(e) {}
 }
-function checkAuth() {
-  try { if (localStorage.getItem('sn_auth') === PASS_HASH) return true; } catch(e) {}
-  return false;
+
+async function authRequest(grant, body) {
+  const resp = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=${grant}`, {
+    method: 'POST', headers: { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+  });
+  if (!resp.ok) return null;
+  return resp.json();
 }
+
+async function getHeaders() {
+  if (session && session.expires_at - 60 < Date.now() / 1000) {
+    const data = await authRequest('refresh_token', { refresh_token: session.refresh_token });
+    if (data) saveSession(data); else logout();
+  }
+  if (!session) throw new Error('登录已过期');
+  return { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' };
+}
+
+function logout() {
+  session = null;
+  try { localStorage.removeItem(SESSION_KEY); } catch(e) {}
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('lock-screen').classList.remove('hidden');
+}
+
 function unlock() {
   document.getElementById('lock-screen').classList.add('hidden');
   document.getElementById('app').style.display = '';
   load();
 }
-if (checkAuth()) {
-  unlock();
-} else {
-  const inp = document.getElementById('lock-input');
+
+document.getElementById('lock-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = e.target.querySelector('button');
   const err = document.getElementById('lock-error');
-  inp.addEventListener('input', async () => {
-    const h = await hashPass(inp.value);
-    if (h === PASS_HASH) {
-      try { localStorage.setItem('sn_auth', PASS_HASH); } catch(e) {}
-      unlock();
-    }
-  });
-  inp.addEventListener('keydown', async (e) => {
-    if (e.key === 'Enter') {
-      const h = await hashPass(inp.value);
-      if (h !== PASS_HASH) {
-        err.textContent = '密码不对';
-        inp.classList.add('shake');
-        setTimeout(() => inp.classList.remove('shake'), 400);
-      }
-    }
-  });
-  inp.focus();
-}
+  btn.disabled = true;
+  err.textContent = '';
+  const data = await authRequest('password', { email: document.getElementById('lock-email').value.trim(), password: document.getElementById('lock-input').value });
+  btn.disabled = false;
+  if (data) {
+    saveSession(data);
+    document.getElementById('lock-input').value = '';
+    unlock();
+  } else {
+    err.textContent = '邮箱或密码不对';
+    const inp = document.getElementById('lock-input');
+    inp.classList.add('shake');
+    setTimeout(() => inp.classList.remove('shake'), 400);
+  }
+});
+
+if (session) unlock();
 
 async function query(table, params = {}) {
   const url = new URL(`${SUPABASE_URL}/rest/v1/${table}`);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-  const resp = await fetch(url, { headers: hdrs });
+  const resp = await fetch(url, { headers: await getHeaders() });
+  if (resp.status === 401) { logout(); return []; }
   if (!resp.ok) return [];
   return resp.json();
 }
@@ -1018,7 +1046,7 @@ async function deliverLetter(id, btn) {
   btn.disabled = true;
   btn.textContent = '...';
   const resp = await fetch(`${SUPABASE_URL}/rest/v1/mood_letters?id=eq.${id}`, {
-    method: 'PATCH', headers: hdrs, body: JSON.stringify({ delivered: true })
+    method: 'PATCH', headers: await getHeaders(), body: JSON.stringify({ delivered: true })
   });
   if (resp.ok) {
     btn.closest('.letter-item').classList.add('delivered');

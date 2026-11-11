@@ -9,8 +9,17 @@ from typing import Any
 import httpx
 from mcp.server.mcpserver import MCPServer
 
+# secret key 只放在本地 .env（已在 .gitignore 里），不进仓库
+_ENV_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+if os.path.exists(_ENV_FILE):
+    with open(_ENV_FILE, encoding="utf-8") as f:
+        for line in f:
+            if "=" in line and not line.lstrip().startswith("#"):
+                k, v = line.strip().split("=", 1)
+                os.environ.setdefault(k, v)
+
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://tuuuowmdouiwtokachpu.supabase.co")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1dXVvd21kb3Vpd3Rva2FjaHB1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0NzYxMzMsImV4cCI6MjEwMTA1MjEzM30.MeYKj8ChZJriUUqOy4QR6wM4sZWZEDPD7anBZoHmNE0")
+SUPABASE_KEY = os.environ["SUPABASE_KEY"]
 
 HEADERS = {
     "apikey": SUPABASE_KEY,
